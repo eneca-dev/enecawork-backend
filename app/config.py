@@ -1,11 +1,11 @@
-from pydantic_settings import BaseSettings
+import os
+from dotenv import load_dotenv
 
-class Settings(BaseSettings):
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    SUPABASE_SERVICE_KEY: str
-    
-    class Config:
-        env_file = ".env"
+load_dotenv()
+
+class Settings:
+    SUPABASE_URL = os.getenv('SUPABASE_URL')
+    SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+    SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')
 
 settings = Settings() 

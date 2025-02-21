@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client, Client
+from supabase import create_client
 from .config import Settings
 from app.routes import auth_router
 
