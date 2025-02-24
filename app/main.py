@@ -2,21 +2,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client
 from .config import Settings
-from app.routes import auth_router
+from app.routes import auth_router, users_router
 
-app = FastAPI(title="Auth API")
+app = FastAPI(title="Backend for eneca.work")
 
 # Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене укажите конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Подключаем роутер аутентификации
+# Подключаем роутеры
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(users_router, prefix="/users", tags=["users"])
 
 # Здоровье сервера
 @app.get("/")
