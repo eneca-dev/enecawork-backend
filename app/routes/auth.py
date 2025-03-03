@@ -1,265 +1,169 @@
-from fastapi import APIRouter, HTTPException, Request
-from supabase import create_client
-from app.config import settings
-import json
+from supabase import Client
+from app.services.auth import AuthServices
+from app.database import get_supabase, get_admin_client
+from fastapi import APIRouter, Depends, status
+from app.schemas.auth import (
+    AuthRegisterRequest, 
+    AuthRegisterResponse, 
+    AuthLoginRequest, 
+    AuthLoginResponse, 
+    AuthResetPasswordRequest, 
+    AuthUpdatePasswordRequest
+)
 
-auth_router = APIRouter()
 
-# Инициализация клиента Supabase
-supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
-
-def validate_email(email: str) -> bool:
-    """
-    Проверяет корректность формата email адреса.
-    
-    Args:
-        email (str): Email адрес для проверки
-    
-    Returns:
-        bool: True если email корректен, False в противном случае
-    
-    Пример:
-        >>> validate_email("user@example.com")
-        True
-        >>> validate_email("invalid.email")
-        False
-    """
-    return '@' in email and '.' in email.split('@')[1]
-
-def validate_registration_data(data: dict) -> None:
-    """
-    Проверяет наличие всех необходимых полей в данных регистрации.
-    
-    Args:
-        data (dict): Словарь с данными пользователя
-    
-    Raises:
-        HTTPException: Если отсутствует обязательное поле или некорректный email
-    
-    Проверяемые поля:
-        - first_name: Имя пользователя
-        - last_name: Фамилия пользователя
-        - department: Отдел
-        - team: Команда
-        - position: Должность
-        - email: Email адрес
-        - password: Пароль
-    """
-    required_fields = [
-        'first_name',
-        'last_name',
-        'department',
-        'team',
-        'position',
-        'email', 
-        'password'
-    ]
-    
-    for field in required_fields:
-        if not data.get(field):
-            raise HTTPException(status_code=400, detail=f"Поле {field} обязательно")
-    
-    if not validate_email(data['email']):
-        raise HTTPException(status_code=400, detail="Некорректный формат email")
-
-@auth_router.post("/register")
-async def register(request: Request):
-    """
-    Регистрирует нового пользователя в системе.
-    
-    Args:
-        request (Request): FastAPI запрос, содержащий JSON с данными пользователя
-    
-    Returns:
-        dict: Сообщение об успешной регистрации
-    
-    Raises:
-        HTTPException: 
-            - 400: Если пользователь уже существует
-            - 400: При ошибке валидации данных
-            - 400: При ошибке создания пользователя
-    
-    Процесс:
-        1. Валидация входных данных
-        2. Проверка существования пользователя
-        3. Создание пользователя в auth системе
-        4. Сохранение дополнительных данных в таблице users
-    """
-    try:
-        user_data = await request.json()
-        validate_registration_data(user_data)
-        
-        user_response = supabase.auth.admin.list_users()
-        existing_users = [user.email for user in user_response]
-        
-        if user_data['email'] in existing_users:
-            raise HTTPException(
-                status_code=400, 
-                detail="Пользователь с такой почтой уже существует"
-            )
-        
-        auth_response = supabase.auth.sign_up({
-            "email": user_data['email'],
-            "password": user_data['password']
-        })
-        
-        user_data_for_table = {
-            'id': auth_response.user.id,
-            'first_name': user_data['first_name'],
-            'last_name': user_data['last_name'],
-            'department': user_data['department'],
-            'team': user_data['team'],
-            'position': user_data['position'],
-            'email': user_data['email']
+auth_router = APIRouter(
+    prefix='/auth',
+    tags=['auth'],
+    responses={
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            'description': 'Internal server error',
+            'content': {
+                'application/json': {
+                    'example': {'detail': 'Internal server error'}
+                }
+            }
         }
-        
-        supabase.table('users').insert(user_data_for_table).execute()
-        
-        return {"message": "Регистрация успешна! Проверьте вашу почту."}
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    }
+)
 
-@auth_router.post("/login")
-async def login(request: Request):
-    """
-    Аутентифицирует пользователя в системе.
-    
-    Args:
-        request (Request): FastAPI запрос с email и паролем
-    
-    Returns:
-        dict: Токены доступа и данные пользователя
-            - access_token: JWT токен для доступа
-            - refresh_token: Токен для обновления access_token
-            - user: Информация о пользователе
-    
-    Raises:
-        HTTPException:
-            - 400: Если отсутствует email или пароль
-            - 401: При неверных учетных данных
-    
-    Примечание:
-        Токены следует хранить в безопасном месте на клиенте
-    """
-    try:
-        credentials = await request.json()
-        
-        if not credentials.get('email') or not credentials.get('password'):
-            raise HTTPException(status_code=400, detail="Email и пароль обязательны")
-            
-        response = supabase.auth.sign_in_with_password({
-            "email": credentials['email'],
-            "password": credentials['password']
-        })
-        
-        return {
-            "access_token": response.session.access_token,
-            "refresh_token": response.session.refresh_token,
-            "user": response.user
+
+@auth_router.post(
+    '/register',
+    response_model=AuthRegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary='Register new user',
+    description='Create new user with specified data and send email for confirmation',
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'description': 'Invalid data',
+            'content': {
+                'application/json': {
+                    'examples': {
+                        'password_mismatch': {
+                            'value': {'detail': 'Passwords do not match'}
+                        },
+                        'email_exists': {
+                            'value': {'detail': 'User with this email already exists'}
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            'description': 'Too many requests'
         }
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="Неверные учетные данные")
+    }
+)
+def register(
+    user_data: AuthRegisterRequest,
+    supabase: Client = Depends(get_admin_client)
+) -> AuthRegisterResponse:
+    '''
+    Register new user:
+    - Check validity of data
+    - Create new user
+    - Send email for confirmation
+    '''
+    result = AuthServices.register_user(supabase=supabase, **user_data.model_dump())
+    return result
 
-@auth_router.post("/reset-password")
-async def reset_password(request: Request):
-    """
-    Отправляет письмо для сброса пароля на указанный email.
-    
-    Args:
-        request (Request): FastAPI запрос с email адресом
-    
-    Returns:
-        dict: Сообщение об отправке инструкций
-    
-    Raises:
-        HTTPException:
-            - 400: При некорректном email
-            - 400: При ошибке отправки письма
-    
-    Примечание:
-        Письмо содержит ссылку для сброса пароля с ограниченным временем действия
-    """
-    try:
-        data = await request.json()
-        email = data.get('email')
-        
-        if not email or not validate_email(email):
-            raise HTTPException(status_code=400, detail="Некорректный email")
-            
-        response = supabase.auth.reset_password_email(email)
-        return {"message": "Инструкции по восстановлению пароля отправлены"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
-@auth_router.post("/update-password")
-async def update_password(request: Request):
-    """
-    Обновляет пароль пользователя.
-    
-    Args:
-        request (Request): FastAPI запрос, содержащий:
-            - access_token: Токен доступа
-            - refresh_token: Токен обновления
-            - new_password: Новый пароль
-    
-    Returns:
-        dict: Сообщение об успешном обновлении пароля
-    
-    Raises:
-        HTTPException:
-            - 400: При отсутствии токенов или пароля
-            - 400: При ошибке обновления пароля
-    """
-    try:
-        data = await request.json()
-        access_token = data.get('access_token')
-        refresh_token = data.get('refresh_token')
-        new_password = data.get('new_password')
-        
-        if not access_token or not refresh_token or not new_password:
-            raise HTTPException(
-                status_code=400, 
-                detail="Отсутствует токен доступа, токен обновления или новый пароль"
-            )
+@auth_router.post(
+    '/login',
+    response_model=AuthLoginResponse,
+    status_code=status.HTTP_200_OK,
+    summary='Login to system',
+    description='Authenticate user and return access tokens',
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            'description': 'Invalid credentials',
+            'content': {
+                'application/json': {
+                    'example': {'detail': 'Invalid email or password'}
+                }
+            }
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            'description': 'Too many requests'
+        }
+    }
+)
+def login(
+    user_data: AuthLoginRequest,
+    supabase: Client = Depends(get_supabase)
+) -> AuthLoginResponse:
+    '''
+    Login to system:
+    - Check credentials
+    - Return access tokens on successful authentication
+    '''
+    result = AuthServices.login_user(supabase=supabase, **user_data.model_dump())
+    return result
 
-        try:
-            session = supabase.auth.set_session(access_token, refresh_token)
-        except Exception as session_error:
-            raise HTTPException(status_code=400, detail=f"Ошибка установки сессии: {str(session_error)}")
-        
-        try:
-            response = supabase.auth.update_user({
-                "password": new_password
-            })
-        except Exception as update_error:
-            raise HTTPException(status_code=400, detail=f"Ошибка обновления пароля: {str(update_error)}")
-        
-        return {"message": "Пароль успешно обновлен"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
-@auth_router.post("/logout")
-async def logout():
-    """
-    Выход пользователя из системы.
-    
-    Returns:
-        dict: Сообщение об успешном выходе
-    
-    Raises:
-        HTTPException: 400 при ошибке выхода
-    
-    Действия:
-        1. Инвалидация текущей сессии в Supabase
-        2. Очистка токенов на стороне сервера
-    
-    Примечание:
-        Клиент должен также удалить сохраненные токены
-    """
-    try:
-        supabase.auth.sign_out()
-        return {"message": "Успешный выход"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@auth_router.post(
+    '/reset-password',
+    status_code=status.HTTP_200_OK,
+    summary='Request password reset',
+    description='Send email with link to reset password',
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'description': 'Invalid email'
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            'description': 'Too many requests'
+        }
+    }
+)
+def reset_password(
+    user_data: AuthResetPasswordRequest,
+    supabase: Client = Depends(get_supabase)
+) -> dict:
+    '''
+    Request password reset:
+    - Check if email exists
+    - Send email with link to reset password
+    '''
+    result = AuthServices.reset_password(supabase=supabase, **user_data.model_dump())
+    return {'message': 'Email with reset link sent'}
+
+
+@auth_router.post(
+    '/update-password',
+    status_code=status.HTTP_200_OK,
+    summary='Update password',
+    description='Update user password',
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'description': 'Invalid data',
+            'content': {
+                'application/json': {
+                    'examples': {
+                        'password_mismatch': {
+                            'value': {'detail': 'Passwords do not match'}
+                        },
+                        'weak_password': {
+                            'value': {'detail': 'Password is too weak'}
+                        }
+                    }
+                }
+            }
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            'description': 'Invalid token'
+        }
+    }
+)
+def update_password(
+    user_data: AuthUpdatePasswordRequest,
+    supabase: Client = Depends(get_supabase)
+) -> dict:
+    '''
+    Update password:
+    - Check validity of tokens
+    - Check new password
+    - Update user password
+    '''
+    result = AuthServices.update_password(supabase=supabase, **user_data.model_dump())
+    return {'message': 'Password updated successfully'}
