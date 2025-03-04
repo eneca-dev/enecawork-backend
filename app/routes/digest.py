@@ -71,10 +71,10 @@ def get_projects(
     description='Get digest markdown by project ID and date',
     responses={
         status.HTTP_404_NOT_FOUND: {
-            'description': 'Digest not found',
+            'description': 'Дайджест не найден',
             'content': {
                 'application/json': {
-                    'example': {'detail': 'Digest not found'}
+                    'example': {'detail': 'Дайджест не найден'}
                 }
             }
         }
