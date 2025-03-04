@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth_router, user_router
+from app.routes import auth_router, user_router, digest_router
 import logging
 import sys
 
@@ -37,6 +37,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router, prefix='/auth', tags=['auth'])
 app.include_router(user_router, prefix='/users', tags=['users'])
+app.include_router(digest_router, prefix='/api', tags=['digest'])
 
 
 # Server health check
