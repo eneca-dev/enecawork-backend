@@ -29,8 +29,8 @@ class DigestDatabaseError(DigestBaseException):
 
 class DigestAuthError(DigestBaseException):
     """Ошибка аутентификации"""
-    def __init__(self, operation: str, details: str):
-        self.message = f"Ошибка аутентификации при {operation}: {details}"
+    def __init__(self, operation: str):
+        self.message = f"Ошибка аутентификации при {operation}"
         super().__init__(self.message)
 
 

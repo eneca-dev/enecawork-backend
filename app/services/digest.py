@@ -3,9 +3,14 @@ from datetime import date
 from typing import List
 from supabase import Client
 from app.schemas.digest import ProjectInfo, DigestResponse
-from app.exceptions.digest import DigestNotFoundException, ProjectNotFoundException, DigestDatabaseError, DigestAuthError, DigestClientError, DigestValidationError
+from app.exceptions.digest import (
+    DigestNotFoundException,
+    ProjectNotFoundException,
+    DigestDatabaseError,
+    DigestAuthError,
+    DigestValidationError
+)
 from postgrest.exceptions import APIError
-from supabase.lib.client_options import ClientException
 from gotrue.errors import AuthApiError
 
 logger = logging.getLogger(__name__)
@@ -31,22 +36,14 @@ class DigestServices:
             return list(unique_projects.values())
             
         except APIError as e:
-            # Ошибки PostgREST API (проблемы с запросами к БД)
             logger.error(f"PostgREST API error: {str(e)}")
             raise DigestDatabaseError("получении списка проектов", str(e))
             
         except AuthApiError as e:
-            # Ошибки аутентификации
             logger.error(f"Authentication error: {str(e)}")
-            raise DigestAuthError("проверке доступа к данным", str(e))
-            
-        except ClientException as e:
-            # Ошибки клиента Supabase
-            logger.error(f"Supabase client error: {str(e)}")
-            raise DigestClientError("работе с Supabase", str(e))
+            raise DigestAuthError("проверке доступа к данным")
             
         except ValueError as e:
-            # Ошибки валидации данных
             logger.error(f"Data validation error: {str(e)}")
             raise DigestValidationError("обработке данных проектов", str(e))
     
@@ -77,11 +74,6 @@ class DigestServices:
             # Ошибки аутентификации
             logger.error(f"Authentication error: {str(e)}")
             raise DigestAuthError("проверке доступа к дайджесту", str(e))
-            
-        except ClientException as e:
-            # Ошибки клиента Supabase
-            logger.error(f"Supabase client error: {str(e)}")
-            raise DigestClientError("работе с Supabase", str(e))
             
         except ValueError as e:
             # Ошибки валидации данных

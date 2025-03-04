@@ -88,20 +88,4 @@ def get_digest_text(
         supabase=supabase,
         project_id=request.project_id,
         digest_date=request.digest_date
-    )
-
-@digest_router.exception_handler(DigestBaseException)
-async def digest_exception_handler(request, exc: DigestBaseException):
-    # Находим подходящий статус код
-    for exc_type, status_code in ERROR_HANDLERS.items():
-        if isinstance(exc, exc_type):
-            # Для внутренних ошибок логируем детали
-            if isinstance(exc, (DigestDatabaseError, DigestClientError)):
-                logger.error(f"Internal error: {str(exc)}")
-            
-            # Получаем сообщение из ERROR_MESSAGES
-            _, message = ERROR_MESSAGES[status_code]
-            return JSONResponse(
-                status_code=status_code,
-                content={'detail': message}
-            ) 
+    ) 
