@@ -14,6 +14,7 @@ from app.exceptions.digest import (
     DigestNotFoundException
 )
 import logging
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +64,8 @@ def get_projects(
 ) -> List[ProjectInfo]:
     return DigestServices.get_unique_projects(supabase=supabase)
 
-@digest_router.post(
-    '/markdown',
+@digest_router.get(
+    '/markdown/{project_id}',
     response_model=DigestResponse,
     status_code=status.HTTP_200_OK,
     summary='Get digest markdown',
@@ -81,11 +82,12 @@ def get_projects(
     }
 )
 def get_digest_text(
-    request: DigestRequest,
+    project_id: int,
+    digest_date: date,  # будет передаваться как query параметр
     supabase: Client = Depends(get_supabase)
 ) -> DigestResponse:
     return DigestServices.get_digest(
         supabase=supabase,
-        project_id=request.project_id,
-        digest_date=request.digest_date
+        project_id=project_id,
+        digest_date=digest_date
     ) 
