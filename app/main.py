@@ -57,7 +57,7 @@ async def digest_exception_handler(request: Request, exc: DigestBaseException):
             status_code=status.HTTP_400_BAD_REQUEST,
             content={'detail': 'Не удалось выполнить операцию'}
         )
-    
+   
     # Если не нашли подходящий обработчик
     logger.error(f"Unhandled digest error: {str(exc)}")
     return JSONResponse(
@@ -85,4 +85,4 @@ app.include_router(digest_router, prefix='/api', tags=['digest'])
 # Server health check
 @app.get('/')
 async def health_check():
-    return {'status': 'healthy'} 
+    return {'status': 'healthy'}

@@ -5,9 +5,11 @@ from supabase import create_client, Client
 
 settings = get_settings()
 
+
 @lru_cache()
 def get_supabase() -> Client:
     return create_client(settings.supabase_url, settings.supabase_key)
+
 
 @lru_cache()
 def get_admin_client() -> Client:

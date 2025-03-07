@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, status
 from supabase import Client
-from typing import List, Dict
+from typing import List
 from app.database import get_supabase
 from app.services.digest import DigestServices
-from app.schemas.digest import ProjectInfo, DigestRequest, DigestResponse
-from fastapi.responses import JSONResponse
+from app.schemas.digest import ProjectInfo, DigestResponse
 from app.exceptions.digest import (
-    DigestBaseException,
     DigestDatabaseError,
     DigestAuthError,
     DigestClientError,
@@ -52,6 +50,7 @@ digest_router = APIRouter(
     responses=ERROR_RESPONSES
 )
 
+
 @digest_router.get(
     '/projects',
     response_model=List[ProjectInfo],
@@ -63,6 +62,7 @@ def get_projects(
     supabase: Client = Depends(get_supabase)
 ) -> List[ProjectInfo]:
     return DigestServices.get_unique_projects(supabase=supabase)
+
 
 @digest_router.get(
     '/markdown/{project_id}',
@@ -90,4 +90,4 @@ def get_digest_text(
         supabase=supabase,
         project_id=project_id,
         digest_date=digest_date
-    ) 
+    )
