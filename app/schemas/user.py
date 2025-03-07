@@ -3,8 +3,9 @@ from app.schemas.auth import Team, Category
 
 
 class UserInformationRequest(BaseModel):
-    access_token: str = Field(..., description='Access token')
-    refresh_token: str = Field(..., description='Refresh token')
+    access_token: str = Field(..., description="Access token")
+    refresh_token: str = Field(..., description="Refresh token")
+
 
 class UserInformationResponse(BaseModel):
     first_name: str

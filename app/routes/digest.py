@@ -9,7 +9,7 @@ from app.exceptions.digest import (
     DigestAuthError,
     DigestClientError,
     DigestValidationError,
-    DigestNotFoundException
+    DigestNotFoundException,
 )
 import logging
 from datetime import date
@@ -18,20 +18,16 @@ logger = logging.getLogger(__name__)
 
 # Определяем базовые сообщения об ошибках
 ERROR_MESSAGES = {
-    status.HTTP_400_BAD_REQUEST: ('Bad request', 'Неверный запрос'),
-    status.HTTP_401_UNAUTHORIZED: ('Unauthorized', 'Ошибка авторизации'),
-    status.HTTP_404_NOT_FOUND: ('Not found', 'Дайджест не найден')
+    status.HTTP_400_BAD_REQUEST: ("Bad request", "Неверный запрос"),
+    status.HTTP_401_UNAUTHORIZED: ("Unauthorized", "Ошибка авторизации"),
+    status.HTTP_404_NOT_FOUND: ("Not found", "Дайджест не найден"),
 }
 
 # Создаем ответы для документации API из базовых сообщений
 ERROR_RESPONSES = {
     status_code: {
-        'description': description,
-        'content': {
-            'application/json': {
-                'example': {'detail': message}
-            }
-        }
+        "description": description,
+        "content": {"application/json": {"example": {"detail": message}}},
     }
     for status_code, (description, message) in ERROR_MESSAGES.items()
 }
@@ -41,53 +37,48 @@ ERROR_HANDLERS = {
     DigestNotFoundException: status.HTTP_404_NOT_FOUND,
     DigestAuthError: status.HTTP_401_UNAUTHORIZED,
     DigestValidationError: status.HTTP_400_BAD_REQUEST,
-    (DigestDatabaseError, DigestClientError): status.HTTP_400_BAD_REQUEST
+    (DigestDatabaseError, DigestClientError): status.HTTP_400_BAD_REQUEST,
 }
 
-digest_router = APIRouter(
-    prefix='/digest',
-    tags=['digest'],
-    responses=ERROR_RESPONSES
-)
+digest_router = APIRouter(prefix="/digest",
+                          tags=["digest"],
+                          responses=ERROR_RESPONSES)
 
 
 @digest_router.get(
-    '/projects',
+    "/projects",
     response_model=List[ProjectInfo],
     status_code=status.HTTP_200_OK,
-    summary='Get unique projects list',
-    description='Get list of unique projects with their managers'
+    summary="Get unique projects list",
+    description="Get list of unique projects with their managers",
 )
-def get_projects(
-    supabase: Client = Depends(get_supabase)
-) -> List[ProjectInfo]:
+def get_projects(supabase: Client = Depends(get_supabase)) -> List[ProjectInfo]:
     return DigestServices.get_unique_projects(supabase=supabase)
 
 
 @digest_router.get(
-    '/markdown/{project_id}',
+    "/markdown/{project_id}",
     response_model=DigestResponse,
     status_code=status.HTTP_200_OK,
-    summary='Get digest markdown',
-    description='Get digest markdown by project ID and date',
+    summary="Get digest markdown",
+    description="Get digest markdown by project ID and date",
     responses={
         status.HTTP_404_NOT_FOUND: {
-            'description': 'Дайджест не найден',
-            'content': {
-                'application/json': {
-                    'example': {'detail': 'Дайджест не найден'}
+            "description": "Дайджест не найден",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Дайджест не найден"}
                 }
-            }
+
+            },
         }
-    }
+    },
 )
 def get_digest_text(
     project_id: int,
     digest_date: date,  # будет передаваться как query параметр
-    supabase: Client = Depends(get_supabase)
+    supabase: Client = Depends(get_supabase),
 ) -> DigestResponse:
     return DigestServices.get_digest(
-        supabase=supabase,
-        project_id=project_id,
-        digest_date=digest_date
+        supabase=supabase, project_id=project_id, digest_date=digest_date
     )
