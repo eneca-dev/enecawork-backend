@@ -12,7 +12,7 @@ from app.exceptions.digest import (
     DigestNotFoundException,
 )
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def get_projects(
     If date is not provided, the current date will be used.
     
     **Examples:**
-    - `/api/markdown/123` → gets digest for today
+    - `/api/markdown/123` → gets digest for yesterday
     - `/api/markdown/123?digest_date=2024-03-20` → gets digest for the specified date
     """,
     responses={
@@ -85,7 +85,7 @@ def get_projects(
 )
 def get_digest_text(
     project_id: int,
-    digest_date: date = date.today(),  # устанавливаем значение по умолчанию
+    digest_date: date = date.today() - timedelta(days=1),  # вчерашняя дата
     supabase: Client = Depends(get_supabase),
 ) -> DigestResponse:
     return DigestServices.get_digest(
