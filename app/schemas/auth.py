@@ -88,3 +88,12 @@ class AuthUpdatePasswordRequest(BaseModel, PasswordValidatorMixin):
         if self.password != self.password_confirm:
             raise ValueError("Passwords do not match")
         return self
+
+
+class AuthRefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., description="Refresh token for access token update")
+
+
+class AuthRefreshTokenResponse(BaseModel):
+    access_token: str = Field(..., description="New access token")
+    refresh_token: str = Field(..., description="New refresh token")

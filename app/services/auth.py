@@ -1,5 +1,9 @@
 from gotrue.errors import AuthApiError
-from app.schemas.auth import AuthRegisterResponse, AuthLoginResponse
+from app.schemas.auth import (
+    AuthRegisterResponse,
+    AuthLoginResponse,
+    AuthRefreshTokenResponse
+)
 from fastapi import HTTPException, status
 import logging
 from supabase import Client
@@ -166,5 +170,38 @@ class AuthServices:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail="Too many requests",
+                )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    @staticmethod
+    def refresh_token(
+        supabase: Client,
+        refresh_token: str,
+    ) -> AuthRefreshTokenResponse:
+        try:
+            auth_response = supabase.auth.refresh_session(refresh_token)
+            
+            if not auth_response.session:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token",
+                )
+
+            return AuthRefreshTokenResponse(
+                access_token=auth_response.session.access_token,
+                refresh_token=auth_response.session.refresh_token,
+            )
+
+        except AuthApiError as e:
+            logger.error(f"Supabase auth error: {str(e)}")
+            if "invalid token" in str(e).lower():
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token"
+                )
+            if "rate limit" in str(e).lower():
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many requests"
                 )
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

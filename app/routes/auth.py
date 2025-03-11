@@ -9,6 +9,8 @@ from app.schemas.auth import (
     AuthLoginResponse,
     AuthResetPasswordRequest,
     AuthUpdatePasswordRequest,
+    AuthRefreshTokenRequest,
+    AuthRefreshTokenResponse,
 )
 
 
@@ -147,3 +149,31 @@ def update_password(
     """
     result = AuthServices.update_password(supabase=supabase, **user_data.model_dump())
     return {"message": "Password updated successfully"}
+
+
+@auth_router.post(
+    "/refresh-token",
+    response_model=AuthRefreshTokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update access token",
+    description="Update access token using refresh token",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Invalid refresh token",
+            "content": {
+                "application/json": {"example": {"detail": "Invalid refresh token"}}
+            },
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {"description": "Too many requests"},
+    },
+)
+def refresh_token(
+    token_data: AuthRefreshTokenRequest, supabase: Client = Depends(get_supabase)
+) -> AuthRefreshTokenResponse:
+    """
+    Update tokens:
+    - Check validity of refresh token
+    - Generate new pair of tokens
+    """
+    result = AuthServices.refresh_token(supabase=supabase, **token_data.model_dump())
+    return result
