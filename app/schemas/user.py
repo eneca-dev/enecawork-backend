@@ -8,10 +8,12 @@ class UserInformationRequest(BaseModel):
 
 
 class UserInformationResponse(BaseModel):
-    first_name: str
-    last_name: str
-    department: str
-    team: Team
-    position: str
-    category: Category
+    id: str
     email: EmailStr
+    department_id: str = None
+    team_id: str = None
+    position_id: str = None
+    category_id: str = None
+    created_at: str = None
+    first_name: str = None
+    last_name: str = None

@@ -35,6 +35,10 @@ class UserServices:
                 )
 
             user_data = response.data[0]
+            # Добавляем email из данных аутентификации, если его нет в таблице users
+            if 'email' not in user_data and hasattr(user_response.user, 'email'):
+                user_data['email'] = user_response.user.email
+                
             return UserInformationResponse(**user_data)
 
         except Exception as e:
@@ -84,6 +88,10 @@ class UserServices:
                 )
             
             user_data = response.data[0]
+            # Добавляем email из данных аутентификации, если его нет в таблице users
+            if 'email' not in user_data and hasattr(user_response.user, 'email'):
+                user_data['email'] = user_response.user.email
+            
             return UserInformationResponse(**user_data)
             
         except Exception as e:
