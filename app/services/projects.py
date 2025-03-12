@@ -2,7 +2,9 @@ from uuid import UUID
 from typing import List
 import logging
 from supabase import Client
+from postgrest.exceptions import APIError
 from app.schemas.projects import ProjectResponse, SectionResponse
+from app.exceptions.assignments import ProjectNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -26,17 +28,22 @@ class ProjectServices:
     ) -> List[SectionResponse]:
         try:
             # Сначала получаем ws_project_id для данного project_id
-            project = (
-                supabase.table("projects")
-                .select("ws_project_id")
-                .eq("id", str(project_id))
-                .single()
-                .execute()
-            )
+            try:
+                project = (
+                    supabase.table("projects")
+                    .select("ws_project_id")
+                    .eq("id", str(project_id))
+                    .single()
+                    .execute()
+                )
 
-            if not project.data:
-                logger.error(f"Project not found: {project_id}")
-                return []
+                if not project.data:
+                    logger.info(f"Проект с ID {project_id} не найден")
+                    raise ProjectNotFoundException(str(project_id))
+            except APIError as e:
+                # Если ошибка при проверке проекта, считаем что проект не найден
+                logger.error(f"Ошибка при проверке проекта: {str(e)}")
+                raise ProjectNotFoundException(str(project_id))
 
             ws_project_id = project.data["ws_project_id"]
 
@@ -61,6 +68,9 @@ class ProjectServices:
                 sections.append(SectionResponse(**section_data))
 
             return sections
+        except ProjectNotFoundException:
+            # Пробрасываем исключение о ненайденном проекте выше
+            raise
         except Exception as e:
             logger.error(f"Error getting sections: {str(e)}")
             raise

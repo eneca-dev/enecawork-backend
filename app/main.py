@@ -11,6 +11,15 @@ from app.exceptions.digest import (
     DigestDatabaseError,
     DigestValidationError,
 )
+from app.exceptions.assignments import (
+    AssignmentBaseException,
+    AssignmentNotFoundException,
+    ProjectNotFoundException,
+    SectionNotFoundException,
+    AssignmentValidationError,
+    AssignmentDatabaseError,
+    AssignmentAuthError,
+)
 import logging
 import sys
 
@@ -30,7 +39,7 @@ logger.info("Application starting...")
 app = FastAPI(title="Backend for eneca.work")
 
 
-# Добавляем обработчик исключений
+# Добавляем обработчик исключений для модуля digest
 @app.exception_handler(DigestBaseException)
 async def digest_exception_handler(request: Request, exc: DigestBaseException):
     if isinstance(exc, DigestNotFoundException):
@@ -57,6 +66,51 @@ async def digest_exception_handler(request: Request, exc: DigestBaseException):
     logger.error(f"Unhandled digest error: {str(exc)}")
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": "Неизвестная ошибка"},
+    )
+
+
+# Отдельный обработчик для ProjectNotFoundException
+@app.exception_handler(ProjectNotFoundException)
+async def project_not_found_handler(request: Request, exc: ProjectNotFoundException):
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": str(exc)}
+    )
+
+
+# Добавляем обработчик исключений для модуля assignments
+@app.exception_handler(AssignmentBaseException)
+async def assignment_exception_handler(request: Request, exc: AssignmentBaseException):
+    if isinstance(exc, AssignmentNotFoundException):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
+        )
+    elif isinstance(exc, SectionNotFoundException):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
+        )
+    elif isinstance(exc, AssignmentAuthError):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(exc)}
+        )
+    elif isinstance(exc, AssignmentValidationError):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+            content={"detail": str(exc)}
+        )
+    elif isinstance(exc, AssignmentDatabaseError):
+        # Логируем реальную ошибку, но клиенту отправляем общее сообщение
+        logger.error(f"Database error: {str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Ошибка при работе с базой данных"},
+        )
+
+    # Если не нашли подходящий обработчик
+    logger.error(f"Unhandled assignment error: {str(exc)}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Неизвестная ошибка"},
     )
 

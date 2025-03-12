@@ -6,6 +6,7 @@ from app.database import get_supabase
 from app.dependencies.auth import get_current_user_id
 from app.services.projects import ProjectServices
 from app.schemas.projects import ProjectResponse, SectionResponse
+from app.exceptions.assignments import ProjectNotFoundException
 
 router = APIRouter(tags=["projects"])
 
@@ -14,7 +15,9 @@ router = APIRouter(tags=["projects"])
     "/projects",
     response_model=List[ProjectResponse],
     status_code=status.HTTP_200_OK,
-    responses={401: {"description": "Ошибка аутентификации"}},
+    responses={
+        401: {"description": "Ошибка аутентификации"},
+    },
 )
 async def get_projects(
     supabase: Client = Depends(get_supabase),

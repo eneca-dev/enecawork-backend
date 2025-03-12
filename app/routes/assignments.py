@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from supabase import Client
 from typing import List
 from uuid import UUID
@@ -29,6 +29,9 @@ async def get_project_assignments(
     supabase: Client = Depends(get_supabase),
     current_user_id: UUID = Depends(get_current_user_id),
 ):
+    """
+    Получить список всех заданий проекта
+    """
     return AssignmentServices.get_project_assignments(supabase, project_id)
 
 
@@ -38,7 +41,8 @@ async def get_project_assignments(
     status_code=status.HTTP_201_CREATED,
     responses={
         401: {"description": "Ошибка аутентификации"},
-        404: {"description": "Проект не найден"},
+        404: {"description": "Проект или секция не найдены"},
+        422: {"description": "Ошибка валидации данных"},
     },
 )
 async def create_assignment(
@@ -47,6 +51,9 @@ async def create_assignment(
     supabase: Client = Depends(get_supabase),
     current_user_id: UUID = Depends(get_current_user_id),
 ):
+    """
+    Создать новое задание в проекте
+    """
     return AssignmentServices.create_assignment(
         supabase, project_id, current_user_id, assignment
     )
@@ -58,6 +65,7 @@ async def create_assignment(
     responses={
         401: {"description": "Ошибка аутентификации"},
         404: {"description": "Задание не найдено"},
+        422: {"description": "Ошибка валидации данных"},
     },
 )
 async def update_assignment(
@@ -66,6 +74,9 @@ async def update_assignment(
     supabase: Client = Depends(get_supabase),
     current_user_id: UUID = Depends(get_current_user_id),
 ):
+    """
+    Обновить существующее задание
+    """
     return AssignmentServices.update_assignment(
         supabase, assignment_id, current_user_id, update_data
     )
@@ -76,6 +87,7 @@ async def update_assignment(
     responses={
         401: {"description": "Ошибка аутентификации"},
         404: {"description": "Задание не найдено"},
+        422: {"description": "Ошибка валидации данных"},
     },
 )
 async def update_assignment_status(
@@ -84,14 +96,13 @@ async def update_assignment_status(
     supabase: Client = Depends(get_supabase),
     current_user_id: UUID = Depends(get_current_user_id),
 ):
-    result = AssignmentServices.update_assignment_status(
+    """
+    Обновить статус задания
+    """
+    AssignmentServices.update_assignment_status(
         supabase, assignment_id, status_update, current_user_id
     )
-    if result:
-        return {"message": "Статус задания успешно обновлен"}
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND, detail="Задание не найдено"
-    )
+    return {"message": "Статус задания успешно обновлен"}
 
 
 @router.delete(
@@ -106,9 +117,8 @@ async def delete_assignment(
     supabase: Client = Depends(get_supabase),
     current_user_id: UUID = Depends(get_current_user_id),
 ):
-    result = AssignmentServices.delete_assignment(supabase, assignment_id)
-    if result:
-        return {"message": "Задание успешно удалено"}
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND, detail="Задание не найдено"
-    )
+    """
+    Удалить задание
+    """
+    AssignmentServices.delete_assignment(supabase, assignment_id)
+    return {"message": "Задание успешно удалено"}
