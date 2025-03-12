@@ -48,11 +48,13 @@ async def digest_exception_handler(request: Request, exc: DigestBaseException):
         )
     elif isinstance(exc, DigestAuthError):
         return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(exc)}
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": str(exc)}
         )
     elif isinstance(exc, DigestValidationError):
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)}
         )
     elif isinstance(exc, DigestDatabaseError):
         # Логируем реальную ошибку, но клиенту отправляем общее сообщение
@@ -72,16 +74,17 @@ async def digest_exception_handler(request: Request, exc: DigestBaseException):
 
 # Отдельный обработчик для ProjectNotFoundException
 @app.exception_handler(ProjectNotFoundException)
-async def project_not_found_handler(request: Request, exc: ProjectNotFoundException):
+async def project_not_found_handler(request: Request,
+                                    exc: ProjectNotFoundException):
     return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={"detail": str(exc)}
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
     )
 
 
 # Добавляем обработчик исключений для модуля assignments
 @app.exception_handler(AssignmentBaseException)
-async def assignment_exception_handler(request: Request, exc: AssignmentBaseException):
+async def assignment_exception_handler(request: Request,
+                                       exc: AssignmentBaseException):
     if isinstance(exc, AssignmentNotFoundException):
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
@@ -92,12 +95,13 @@ async def assignment_exception_handler(request: Request, exc: AssignmentBaseExce
         )
     elif isinstance(exc, AssignmentAuthError):
         return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(exc)}
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": str(exc)}
         )
     elif isinstance(exc, AssignmentValidationError):
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            content={"detail": str(exc)}
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": str(exc)},
         )
     elif isinstance(exc, AssignmentDatabaseError):
         # Логируем реальную ошибку, но клиенту отправляем общее сообщение

@@ -15,7 +15,10 @@ class AssignmentStatus(str, Enum):
 
 class AssignmentBase(BaseModel):
     text: str = Field(..., description="Текст задания")
-    link: Optional[str] = Field("", description="Ссылка на дополнительные материалы")
+    link: Optional[str] = Field("", description="""
+                                Ссылка на дополнительные материалы
+                                """
+                                )
     status: AssignmentStatus = Field(default=AssignmentStatus.WAITING)
     due_date: date = Field(..., description="Срок выполнения")
 

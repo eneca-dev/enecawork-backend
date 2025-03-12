@@ -14,7 +14,9 @@ class ProjectServices:
     def get_projects(supabase: Client) -> List[ProjectResponse]:
         try:
             response = (
-                supabase.table("projects").select("id, name, ws_project_id").execute()
+                supabase.table("projects")
+                .select("id, name, ws_project_id")
+                .execute()
             )
             logger.info(f"Projects response: {response.data}")
             return [ProjectResponse(**item) for item in response.data]
@@ -41,7 +43,8 @@ class ProjectServices:
                     logger.info(f"Проект с ID {project_id} не найден")
                     raise ProjectNotFoundException(str(project_id))
             except APIError as e:
-                # Если ошибка при проверке проекта, считаем что проект не найден
+                # Если ошибка при проверке проекта,
+                # считаем что проект не найден
                 logger.error(f"Ошибка при проверке проекта: {str(e)}")
                 raise ProjectNotFoundException(str(project_id))
 

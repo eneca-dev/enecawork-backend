@@ -9,7 +9,8 @@ class DigestNotFoundException(DigestBaseException):
 
     def __init__(self, project_id: int, digest_date: str):
         self.message = (
-            f"Дайджест не найден для проекта {project_id} " f"на дату {digest_date}"
+            f"Дайджест не найден для проекта {project_id} "
+            f"на дату {digest_date}"
         )
         super().__init__(self.message)
 
