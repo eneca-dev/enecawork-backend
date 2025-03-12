@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.routes import auth_router, user_router, digest_router
+from app.routes.assignments import router as assignments_router
+from app.routes.projects import router as projects_router
 from app.exceptions.digest import (
     DigestBaseException,
     DigestNotFoundException,
@@ -37,13 +39,11 @@ async def digest_exception_handler(request: Request, exc: DigestBaseException):
         )
     elif isinstance(exc, DigestAuthError):
         return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": str(exc)}
+            status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(exc)}
         )
     elif isinstance(exc, DigestValidationError):
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": str(exc)}
+            status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
         )
     elif isinstance(exc, DigestDatabaseError):
         # Логируем реальную ошибку, но клиенту отправляем общее сообщение
@@ -75,6 +75,8 @@ app.add_middleware(
 app.include_router(auth_router, tags=["auth"])
 app.include_router(user_router, tags=["users"])
 app.include_router(digest_router, prefix="/api", tags=["digest"])
+app.include_router(assignments_router, prefix="/api")
+app.include_router(projects_router, prefix="/api")
 
 
 # Server health check

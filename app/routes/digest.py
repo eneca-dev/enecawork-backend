@@ -50,11 +50,11 @@ digest_router = APIRouter(prefix="/digest",
     response_model=List[ProjectInfo],
     status_code=status.HTTP_200_OK,
     summary="Get unique projects list",
-    description="Get list of unique projects with their managers",
+    description="""
+    Get list of unique projects with their managers
+    """,
 )
-def get_projects(
-    supabase: Client = Depends(get_supabase)
-) -> List[ProjectInfo]:
+def get_projects(supabase: Client = Depends(get_supabase)) -> List[ProjectInfo]:
     return DigestServices.get_unique_projects(supabase=supabase)
 
 
@@ -66,7 +66,7 @@ def get_projects(
     description="""
     Get digest markdown by project ID and date.
     If date is not provided, the current date will be used.
-    
+  
     **Examples:**
     - `/api/markdown/123` → gets digest for yesterday
     - `/api/markdown/123?digest_date=2024-03-20` → gets digest for the specified date
@@ -75,10 +75,7 @@ def get_projects(
         status.HTTP_404_NOT_FOUND: {
             "description": "Дайджест не найден",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Дайджест не найден"}
-                }
-
+                "application/json": {"example": {"detail": "Дайджест не найден"}}
             },
         }
     },
