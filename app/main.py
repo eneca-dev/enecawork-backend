@@ -64,7 +64,7 @@ async def digest_exception_handler(request: Request, exc: DigestBaseException):
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
