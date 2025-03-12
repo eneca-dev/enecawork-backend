@@ -92,24 +92,34 @@ class AuthServices:
         device_id: str = None,
     ) -> AuthLoginResponse:
         try:
-            # Создаем опции для входа
-            options = {}
+            logger.info(f"Login attempt for user: {email}, device_id: {device_id}")
             
-            # Если передан device_id, добавляем его в метаданные сессии
-            if device_id:
-                options["data"] = {"device_id": device_id}
-            
+            # Вместо использования options, мы будем использовать базовую аутентификацию
+            # и затем обновлять метаданные пользователя, если это необходимо
             auth_response = supabase.auth.sign_in_with_password(
-                {"email": email, "password": password},
-                options=options if options else None
+                {"email": email, "password": password}
             )
 
             if not auth_response.user:
+                logger.warning(f"Login failed for user: {email} - No user in response")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid email or password",
                 )
 
+            # Если передан device_id, обновляем метаданные пользователя
+            if device_id and auth_response.session:
+                try:
+                    # Обновляем метаданные пользователя
+                    supabase.auth.update_user(
+                        {"data": {"device_id": device_id}}
+                    )
+                    logger.info(f"Updated device_id for user: {email}")
+                except Exception as e:
+                    # Логируем ошибку, но не прерываем процесс входа
+                    logger.warning(f"Failed to update user metadata: {str(e)}")
+
+            logger.info(f"User {email} successfully logged in with device_id: {device_id}")
             return AuthLoginResponse(
                 email=auth_response.user.email,
                 access_token=auth_response.session.access_token,
@@ -185,25 +195,35 @@ class AuthServices:
         device_id: str = None,
     ) -> RefreshTokenResponse:
         try:
-            # Создаем опции для обновления токена
-            options = {}
+            logger.info(f"Token refresh attempt with device_id: {device_id}")
             
-            # Если передан device_id, добавляем его в метаданные сессии
-            if device_id:
-                options["data"] = {"device_id": device_id}
-            
-            # Обновляем токен
-            auth_response = supabase.auth.refresh_session(
-                refresh_token,
-                options=options if options else None
-            )
+            # Обновляем токен без использования options
+            auth_response = supabase.auth.refresh_session(refresh_token)
             
             if not auth_response.session:
+                logger.warning("Token refresh failed - No session in response")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid refresh token",
                 )
             
+            # Если передан device_id, обновляем метаданные пользователя
+            if device_id and auth_response.user:
+                try:
+                    # Устанавливаем сессию и обновляем метаданные
+                    supabase.auth.set_session(
+                        auth_response.session.access_token,
+                        auth_response.session.refresh_token
+                    )
+                    supabase.auth.update_user(
+                        {"data": {"device_id": device_id}}
+                    )
+                    logger.info(f"Updated device_id for user during token refresh")
+                except Exception as e:
+                    # Логируем ошибку, но не прерываем процесс обновления токена
+                    logger.warning(f"Failed to update user metadata: {str(e)}")
+            
+            logger.info(f"Token successfully refreshed for device_id: {device_id}")
             return RefreshTokenResponse(
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
