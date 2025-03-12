@@ -59,7 +59,6 @@ class AuthRegisterResponse(BaseModel):
 class AuthLoginRequest(BaseModel, PasswordValidatorMixin):
     email: EmailStr = Field(..., description="Email of the user")
     password: str = Field(..., description="Password")
-    device_id: str = Field(None, description="Device identifier")
 
     @model_validator(mode="after")
     def validate_password(self) -> "AuthLoginRequest":
@@ -93,7 +92,6 @@ class AuthUpdatePasswordRequest(BaseModel, PasswordValidatorMixin):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., description="Refresh token")
-    device_id: str = Field(None, description="Device identifier")
 
 
 class RefreshTokenResponse(BaseModel):

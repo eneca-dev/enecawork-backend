@@ -89,13 +89,11 @@ class AuthServices:
         supabase: Client,
         email: str,
         password: str,
-        device_id: str = None,
     ) -> AuthLoginResponse:
         try:
-            logger.info(f"Login attempt for user: {email}, device_id: {device_id}")
+            logger.info(f"Login attempt for user: {email}")
             
             # Вместо использования options, мы будем использовать базовую аутентификацию
-            # и затем обновлять метаданные пользователя, если это необходимо
             auth_response = supabase.auth.sign_in_with_password(
                 {"email": email, "password": password}
             )
@@ -107,19 +105,7 @@ class AuthServices:
                     detail="Invalid email or password",
                 )
 
-            # Если передан device_id, обновляем метаданные пользователя
-            if device_id and auth_response.session:
-                try:
-                    # Обновляем метаданные пользователя
-                    supabase.auth.update_user(
-                        {"data": {"device_id": device_id}}
-                    )
-                    logger.info(f"Updated device_id for user: {email}")
-                except Exception as e:
-                    # Логируем ошибку, но не прерываем процесс входа
-                    logger.warning(f"Failed to update user metadata: {str(e)}")
-
-            logger.info(f"User {email} successfully logged in with device_id: {device_id}")
+            logger.info(f"User {email} successfully logged in")
             return AuthLoginResponse(
                 email=auth_response.user.email,
                 access_token=auth_response.session.access_token,
@@ -192,10 +178,9 @@ class AuthServices:
     def refresh_token(
         supabase: Client,
         refresh_token: str,
-        device_id: str = None,
     ) -> RefreshTokenResponse:
         try:
-            logger.info(f"Token refresh attempt with device_id: {device_id}")
+            logger.info(f"Token refresh attempt")
             
             # Обновляем токен без использования options
             auth_response = supabase.auth.refresh_session(refresh_token)
@@ -207,23 +192,7 @@ class AuthServices:
                     detail="Invalid refresh token",
                 )
             
-            # Если передан device_id, обновляем метаданные пользователя
-            if device_id and auth_response.user:
-                try:
-                    # Устанавливаем сессию и обновляем метаданные
-                    supabase.auth.set_session(
-                        auth_response.session.access_token,
-                        auth_response.session.refresh_token
-                    )
-                    supabase.auth.update_user(
-                        {"data": {"device_id": device_id}}
-                    )
-                    logger.info(f"Updated device_id for user during token refresh")
-                except Exception as e:
-                    # Логируем ошибку, но не прерываем процесс обновления токена
-                    logger.warning(f"Failed to update user metadata: {str(e)}")
-            
-            logger.info(f"Token successfully refreshed for device_id: {device_id}")
+            logger.info(f"Token successfully refreshed")
             return RefreshTokenResponse(
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
