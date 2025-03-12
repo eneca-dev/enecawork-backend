@@ -1,5 +1,5 @@
 from gotrue.errors import AuthApiError
-from app.schemas.auth import AuthRegisterResponse, AuthLoginResponse
+from app.schemas.auth import AuthRegisterResponse, AuthLoginResponse, RefreshTokenResponse
 from fastapi import HTTPException, status
 import logging
 from supabase import Client
@@ -89,10 +89,19 @@ class AuthServices:
         supabase: Client,
         email: str,
         password: str,
+        device_id: str = None,
     ) -> AuthLoginResponse:
         try:
+            # Создаем опции для входа
+            options = {}
+            
+            # Если передан device_id, добавляем его в метаданные сессии
+            if device_id:
+                options["data"] = {"device_id": device_id}
+            
             auth_response = supabase.auth.sign_in_with_password(
-                {"email": email, "password": password}
+                {"email": email, "password": password},
+                options=options if options else None
             )
 
             if not auth_response.user:
@@ -161,6 +170,51 @@ class AuthServices:
             if "invalid token" in str(e).lower() or "invalid session" in str(e).lower():
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                )
+            if "rate limit" in str(e).lower():
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many requests",
+                )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    @staticmethod
+    def refresh_token(
+        supabase: Client,
+        refresh_token: str,
+        device_id: str = None,
+    ) -> RefreshTokenResponse:
+        try:
+            # Создаем опции для обновления токена
+            options = {}
+            
+            # Если передан device_id, добавляем его в метаданные сессии
+            if device_id:
+                options["data"] = {"device_id": device_id}
+            
+            # Обновляем токен
+            auth_response = supabase.auth.refresh_session(
+                refresh_token,
+                options=options if options else None
+            )
+            
+            if not auth_response.session:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token",
+                )
+            
+            return RefreshTokenResponse(
+                access_token=auth_response.session.access_token,
+                refresh_token=auth_response.session.refresh_token,
+            )
+            
+        except AuthApiError as e:
+            logger.error(f"Supabase auth error: {str(e)}")
+            if "invalid token" in str(e).lower() or "invalid session" in str(e).lower():
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, 
+                    detail="Invalid refresh token"
                 )
             if "rate limit" in str(e).lower():
                 raise HTTPException(
