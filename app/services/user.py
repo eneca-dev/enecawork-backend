@@ -61,11 +61,12 @@ class UserServices:
         access_token = auth_header.replace("Bearer ", "")
         
         try:
-            # Устанавливаем сессию только с access token
-            supabase.auth.set_session(access_token, None)
+            # Вместо установки сессии с None в качестве refresh_token,
+            # используем заголовок Authorization напрямую
+            headers = {"Authorization": f"Bearer {access_token}"}
             
-            # Получаем текущего пользователя
-            user_response = supabase.auth.get_user()
+            # Получаем текущего пользователя с использованием заголовка
+            user_response = supabase.auth.get_user(jwt=access_token)
             user_id = user_response.user.id
             
             if not user_response:
